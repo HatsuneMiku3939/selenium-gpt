@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -17,21 +18,27 @@ type SeleniumSession struct {
 }
 
 type SeleniumNavigation struct {
-	URL        string `json:"url"`
-	PageSource string `json:"page_source"`
+	URL string `json:"url"`
 }
 
 type SeleniumScreenshot struct {
 	ImageURL string `json:"image_url"`
 }
 
+type ElementClick struct {
+	By    string `json:"by"`
+	Value string `json:"value"`
+}
+
 type SeleniumPageSource struct {
+	URL        string `json:"url"`
 	PageSource string `json:"page_source"`
 }
 
-type SeleniumElementSelection struct {
+type ElementSendKeys struct {
 	By    string `json:"by"`
 	Value string `json:"value"`
+	Keys  string `json:"keys"`
 }
 
 var SeleniumSessionList []SeleniumSession
@@ -83,7 +90,6 @@ func main() {
 		SeleniumSessionList = append(SeleniumSessionList, *s)
 		return c.JSON(200, s)
 	})
-
 	e.GET("/session/:id", func(c echo.Context) error {
 		id := c.Param("id")
 		for _, s := range SeleniumSessionList {
@@ -94,7 +100,6 @@ func main() {
 
 		return echo.NewHTTPError(404, "Not Found")
 	})
-
 	e.DELETE("/session/:id", func(c echo.Context) error {
 		id := c.Param("id")
 		for i, s := range SeleniumSessionList {
@@ -137,19 +142,8 @@ func main() {
 
 		r := new(SeleniumNavigation)
 		r.URL = url
-
-		// get page source
-		pageSource, err := driver.PageSource()
-		if err != nil {
-			log.Print("Error:", err)
-			return echo.NewHTTPError(500, err)
-		}
-
-		r.PageSource = pageSource
-
 		return c.JSON(200, r)
 	})
-
 	e.POST("/navigation/:id/to", func(c echo.Context) error {
 		var sess SeleniumSession
 
@@ -179,14 +173,7 @@ func main() {
 			return echo.NewHTTPError(500, err)
 		}
 
-		// get page source
-		pageSource, err := driver.PageSource()
-		if err != nil {
-			log.Print("Error:", err)
-			return echo.NewHTTPError(500, err)
-		}
-
-		n.PageSource = pageSource
+		time.Sleep(3 * time.Second)
 		return c.JSON(200, n)
 	})
 
@@ -212,6 +199,8 @@ func main() {
 			log.Print("Error:", err)
 			return echo.NewHTTPError(500, err)
 		}
+
+		time.Sleep(3 * time.Second)
 
 		// get current url
 		url, err := driver.CurrentURL()
@@ -288,7 +277,14 @@ func main() {
 			return echo.NewHTTPError(500, err)
 		}
 
+		url, err := driver.CurrentURL()
+		if err != nil {
+			log.Print("Error:", err)
+			return echo.NewHTTPError(500, err)
+		}
+
 		r := new(SeleniumPageSource)
+		r.URL = url
 		r.PageSource = pageSource
 		return c.JSON(200, r)
 	})
@@ -316,7 +312,7 @@ func main() {
 			return echo.NewHTTPError(500, err)
 		}
 
-		e := new(SeleniumElementSelection)
+		e := new(ElementClick)
 		if err := c.Bind(e); err != nil {
 			return err
 		}
@@ -341,9 +337,6 @@ func main() {
 			selectBy = selenium.ByID
 		}
 
-		log.Print("selectBy:", selectBy)
-		log.Print("value:", e.Value)
-
 		elem, err := driver.FindElement(selectBy, e.Value)
 		if err != nil {
 			log.Print("Error:", err)
@@ -355,7 +348,84 @@ func main() {
 			return echo.NewHTTPError(500, err)
 		}
 
-		return c.NoContent(204)
+		time.Sleep(3 * time.Second)
+
+		url, err := driver.CurrentURL()
+		if err != nil {
+			log.Print("Error:", err)
+			return echo.NewHTTPError(500, err)
+		}
+
+		r := new(SeleniumNavigation)
+		r.URL = url
+		return c.JSON(200, r)
+	})
+
+	e.POST("/element/:id/send_keys", func(c echo.Context) error {
+		var sess SeleniumSession
+		id := c.Param("id")
+		for _, s := range SeleniumSessionList {
+			if s.ID == id {
+				sess = s
+			}
+		}
+
+		if sess.ID == "" {
+			return echo.NewHTTPError(404, "Not Found")
+		}
+
+		if err := driver.SwitchSession(sess.ID); err != nil {
+			log.Print("Error:", err)
+			return echo.NewHTTPError(500, err)
+		}
+
+		e := new(ElementSendKeys)
+		if err := c.Bind(e); err != nil {
+			return err
+		}
+
+		var selectBy string
+		switch e.By {
+		case "id":
+			selectBy = selenium.ByID
+		case "xpath":
+			selectBy = selenium.ByXPATH
+		case "link_text":
+			selectBy = selenium.ByLinkText
+		case "partial_link_text":
+			selectBy = selenium.ByPartialLinkText
+		case "tag_name":
+			selectBy = selenium.ByTagName
+		case "class_name":
+			selectBy = selenium.ByClassName
+		case "css_selector":
+			selectBy = selenium.ByCSSSelector
+		default:
+			selectBy = selenium.ByID
+		}
+
+		elem, err := driver.FindElement(selectBy, e.Value)
+		if err != nil {
+			log.Print("Error:", err)
+			return echo.NewHTTPError(500, err)
+		}
+
+		if err := elem.SendKeys(e.Keys); err != nil {
+			log.Print("Error:", err)
+			return echo.NewHTTPError(500, err)
+		}
+
+		time.Sleep(3 * time.Second)
+
+		url, err := driver.CurrentURL()
+		if err != nil {
+			log.Print("Error:", err)
+			return echo.NewHTTPError(500, err)
+		}
+
+		r := new(SeleniumNavigation)
+		r.URL = url
+		return c.JSON(200, r)
 	})
 
 	// Start server

@@ -151,7 +151,7 @@ paths:
             type: string
       responses:
         '200':
-          description: base64 encoded png
+          description: Screenshot file URL of the current page
           content:
             application/json:
               schema:
@@ -194,10 +194,39 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ElementSelectionRequest'
+              $ref: '#/components/schemas/ElementClick'
       responses:
-        '204':
-          description: No Content
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Navigation'
+        '404':
+          description: Session Not Found
+  /element/{id}/send_keys:
+    post:
+      summary: Send keys to an element
+      operationId: sendKeysToElement
+      parameters:
+        - name: id
+          description: The session id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ElementSendKeys'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Navigation'
         '404':
           description: Session Not Found
 
@@ -218,6 +247,12 @@ components:
         url:
           type: string
           description: The URL to navigate to
+    PageSource:
+      type: object
+      properties:
+        url:
+          type: string
+          description: The URL of the page
         page_source:
           type: string
           description: The page source
@@ -228,13 +263,7 @@ components:
           type: string
           format: uri
           description: URL of the image in PNG format
-    PageSource:
-      type: object
-      properties:
-        page_source:
-          type: string
-          description: The page source
-    ElementSelectionRequest:
+    ElementClick:
       type: object
       properties:
         by:
@@ -252,3 +281,24 @@ components:
         value:
           type: string
           description: The value to select the element by
+    ElementSendKeys:
+      type: object
+      properties:
+        by:
+          type: string
+          description: How to select the element
+          enum:
+            - id
+            - name
+            - xpath
+            - link_text
+            - partial_link_text
+            - tag_name
+            - class_name
+            - css_selector
+        value:
+          type: string
+          description: The value to select the element by
+        keys:
+          type: string
+          description: The keys to send to the element
