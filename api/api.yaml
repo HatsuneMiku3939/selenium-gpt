@@ -1,0 +1,254 @@
+openapi: '3.0.2'
+info:
+  title: selenium API
+  version: '0.9.0'
+servers:
+  - url: https://........
+paths:
+  /session:
+    get:
+      summary: Get list of all live sessions
+      operationId: getSessions
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Session'
+    post:
+      summary: Create a new session
+      operationId: createSession
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+  /sessions/{id}:
+    get:
+      summary: Get a session by id
+      operationId: getSession
+      parameters:
+        - name: id
+          in: path
+          description: The session id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '404':
+          description: Session Not Found
+    delete:
+      summary: Delete a session by id
+      operationId: deleteSession
+      parameters:
+        - name: id
+          description: The session id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: No Content
+        '404':
+          description: Session Not Found
+
+  /navigation/{id}:
+    get:
+      summary: Get the current URL
+      operationId: getCurrentUrl
+      parameters:
+        - name: id
+          description: The session id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Navigation'
+        '404':
+          description: Session Not Found
+  /navigation/{id}/to:
+    post:
+      summary: Navigate to a URL
+      operationId: navigateTo
+      parameters:
+        - name: id
+          description: The session id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Navigation'
+      responses:
+        '204':
+          description: No Content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Navigation'
+        '404':
+          description: Session Not Found
+  /navigation/{id}/back:
+    post:
+      summary: Navigate back
+      operationId: navigateBack
+      parameters:
+        - name: id
+          description: The session id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: No Content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Navigation'
+        '404':
+          description: Session Not Found
+
+  /document/{id}/screenshot:
+    get:
+      summary: Get a screenshot of the current page
+      operationId: getScreenshot
+      parameters:
+        - name: id
+          description: The session id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: base64 encoded png
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Screenshot'
+        '404':
+          description: Session Not Found
+  /document/{id}/page_source:
+    get:
+      summary: Get the page source
+      operationId: getPageSource
+      parameters:
+        - name: id
+          description: The session id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageSource'
+        '404':
+          description: Session Not Found
+
+  /element/{id}/click:
+    post:
+      summary: Click on an element
+      operationId: clickElement
+      parameters:
+        - name: id
+          description: The session id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ElementSelectionRequest'
+      responses:
+        '204':
+          description: No Content
+        '404':
+          description: Session Not Found
+
+components:
+  schemas:
+    Session:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The session id
+        name:
+          type: string
+          description: The session name
+    Navigation:
+      type: object
+      properties:
+        url:
+          type: string
+          description: The URL to navigate to
+        page_source:
+          type: string
+          description: The page source
+    Screenshot:
+      type: object
+      properties:
+        image_url:
+          type: string
+          format: uri
+          description: URL of the image in PNG format
+    PageSource:
+      type: object
+      properties:
+        page_source:
+          type: string
+          description: The page source
+    ElementSelectionRequest:
+      type: object
+      properties:
+        by:
+          type: string
+          description: How to select the element
+          enum:
+            - id
+            - name
+            - xpath
+            - link_text
+            - partial_link_text
+            - tag_name
+            - class_name
+            - css_selector
+        value:
+          type: string
+          description: The value to select the element by
